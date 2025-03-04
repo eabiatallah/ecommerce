@@ -20,11 +20,15 @@ public class UserInfoUserDetails implements UserDetails {
 
     private String username;
     private String password;
+    private String email;
+    private boolean enabled = false;
     private List<GrantedAuthority> authorities;
 
     public UserInfoUserDetails(UserInfo userInfo) {
         this.username = userInfo.getUsername();
         this.password = userInfo.getPassword();
+        this.email = userInfo.getEmail();
+        this.enabled = userInfo.isEnabled();
         this.authorities = Arrays.stream(userInfo.getRoles().split(","))
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
@@ -57,6 +61,6 @@ public class UserInfoUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
 }
