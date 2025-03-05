@@ -35,6 +35,9 @@ public class UserInfo {
 
     private Date expirationTime;
 
+    @Column(name = "reset_password_token")
+    private String resetPasswordToken;
+
     public UserInfo(String username, String email, String password, String roles, String verificationCode) {
         this.username = username;
         this.email = email;

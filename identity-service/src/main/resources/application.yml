@@ -16,6 +16,8 @@ logging:
     com.eaa: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+allowed.origins: /identity/welcome, /identity/register, /identity/authenticate, /identity/verifyRegistration, /identity/forgot-password, /identity/reset-password
 ---
 spring.config.activate.on-profile: docker
 
