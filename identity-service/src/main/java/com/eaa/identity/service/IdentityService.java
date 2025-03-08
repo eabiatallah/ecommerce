@@ -1,5 +1,6 @@
 package com.eaa.identity.service;
 
+import com.eaa.identity.constants.Constants;
 import com.eaa.identity.entity.UserInfo;
 import com.eaa.identity.repository.UserInfoRepository;
 import com.eaa.identity.request.ResetPasswordRequest;
@@ -109,6 +110,7 @@ public class IdentityService {
             // 2. Generate token and save it to the user
             String resetToken = UUID.randomUUID().toString();
             userInfo.setResetPasswordToken(resetToken);
+            userInfo.setResetPasswordExpirationTime(ServiceUtils.calculateExpirationDate(Constants.RESET_PWD_EXPIRATION_TIME));
             userInfoRepository.save(userInfo);
 
             // 3. Send email with reset link
@@ -123,27 +125,29 @@ public class IdentityService {
 
     public UserResponse resetPasswordForm(String token) {
         UserResponse userResponse = new UserResponse();
+        Calendar cal = Calendar.getInstance();
         try {
             //1. Validate token
             UserInfo userInfo = userInfoRepository.findByResetPasswordToken(token)
+                    .filter(f -> f.getResetPasswordExpirationTime().getTime() - cal.getTime().getTime() > 0)
                     .orElseThrow(() -> new UsernameNotFoundException("Invalid reset password token: " + token));
             //2. If token is valid then return reset password form.
             userResponse.setStatus("Success");
-            userResponse.setMessage("Valid reset password token");
+            userResponse.setMessage("Valid reset password token: "+token);
         } catch (Exception e) {
             userResponse.setStatus("Failed");
             userResponse.setMessage(e.getMessage());
         }
         return userResponse;
-
-
     }
 
     public UserResponse resetPassword(ResetPasswordRequest request) {
+        Calendar cal = Calendar.getInstance();
         UserResponse userResponse = new UserResponse();
         try {
             // 1. Validate token
             UserInfo userInfo = userInfoRepository.findByResetPasswordToken(request.getResetPasswordToken())
+                    .filter(f -> f.getResetPasswordExpirationTime().getTime() - cal.getTime().getTime() > 0)
                     .orElseThrow(() -> new UsernameNotFoundException("Invalid reset password token: " + request.getResetPasswordToken()));
             // 2. Update user's password
             if (!request.getNewPassword().equals(request.getConfirmPassword())) {
@@ -160,6 +164,4 @@ public class IdentityService {
         }
         return userResponse;
     }
-
-
 }

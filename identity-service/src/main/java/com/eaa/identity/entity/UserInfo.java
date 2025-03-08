@@ -38,6 +38,9 @@ public class UserInfo {
     @Column(name = "reset_password_token")
     private String resetPasswordToken;
 
+    @Column(name = "reset_password_expiration_date")
+    private Date resetPasswordExpirationTime;
+
     public UserInfo(String username, String email, String password, String roles, String verificationCode) {
         this.username = username;
         this.email = email;

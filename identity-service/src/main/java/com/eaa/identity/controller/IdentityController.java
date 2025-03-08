@@ -72,8 +72,8 @@ public class IdentityController {
 
     /* click forget password link in UI, pop up will open and asking for you email address,
      if valid email reset token will be generated and sent to this email.*/
-    @PostMapping("/forgot-password")
-    public ResponseEntity<UserResponse> forgotPassword(@RequestParam String email, HttpServletRequest httpRequest) {
+    @PostMapping("/forgot-password/{email}")
+    public ResponseEntity<UserResponse> forgotPassword(@PathVariable String email, HttpServletRequest httpRequest) {
         return ResponseEntity.ok().body(service.forgotPassword(email, httpRequest));
     }
 
