@@ -32,23 +32,17 @@ public class IdentityService {
 
     public UserResponse registerUser(UserRegistrationRequest request, HttpServletRequest httpRequest) {
         UserResponse response = new UserResponse();
-        try {
-            Optional<UserInfo> user = userInfoRepository.findByEmail(request.getEmail());
-            if (user.isPresent()) {
-                response.setMessage("User Already Exists");
-                response.setStatus("Ok");
-                return response;
-            }
-            String verificationCode = UUID.randomUUID().toString();
-            UserInfo newUser = populateUserData(request, verificationCode);
-            userInfoRepository.save(newUser);
-            response.setMessage(verificationEmail(verificationCode, ServiceUtils.applicationUrl(httpRequest), "/identity/verifyRegistration?verificationCode="));
+        Optional<UserInfo> user = userInfoRepository.findByEmail(request.getEmail());
+        if (user.isPresent()) {
+            response.setMessage("User Already Exists");
             response.setStatus("Ok");
-
-        } catch (Exception e) {
-            response.setMessage(e.getMessage());
-            response.setStatus("Failed");
+            return response;
         }
+        String verificationCode = UUID.randomUUID().toString();
+        UserInfo newUser = populateUserData(request, verificationCode);
+        userInfoRepository.save(newUser);
+        response.setMessage(verificationEmail(verificationCode, ServiceUtils.applicationUrl(httpRequest), "/identity/verifyRegistration?verificationCode="));
+        response.setStatus("Ok");
         return response;
     }
 
@@ -78,18 +72,13 @@ public class IdentityService {
 
     public UserResponse updateUser(Long id, UserUpdateRequest request) {
         UserResponse response = new UserResponse();
-        try {
-            UserInfo userInfo = userInfoRepository.findById(id)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + id));
+        UserInfo userInfo = userInfoRepository.findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + id));
 
-            UserInfo updatedUser = populateUserUpdateData(request, userInfo);
-            userInfoRepository.save(updatedUser);
-            response.setMessage("User Updated Successfully");
-            response.setStatus("Success");
-        } catch (Exception e) {
-            response.setMessage(e.getMessage());
-            response.setStatus("Failed");
-        }
+        UserInfo updatedUser = populateUserUpdateData(request, userInfo);
+        userInfoRepository.save(updatedUser);
+        response.setMessage("User Updated Successfully");
+        response.setStatus("Success");
         return response;
     }
 
@@ -102,66 +91,45 @@ public class IdentityService {
 
     public UserResponse forgotPassword(String email, HttpServletRequest httpRequest) {
         UserResponse response = new UserResponse();
-        try {
-            // 1. Check if email exists in database and user is enabled.
-            UserInfo userInfo = userInfoRepository.findByEmail(email).filter(UserInfo::isEnabled)
-                    .orElseThrow(() -> new UsernameNotFoundException("User is disabled or not found with email: " + email));
+        UserInfo userInfo = userInfoRepository.findByEmail(email).filter(UserInfo::isEnabled)
+                .orElseThrow(() -> new UsernameNotFoundException("User is disabled or not found with email: " + email));
 
-            // 2. Generate token and save it to the user
-            String resetToken = UUID.randomUUID().toString();
-            userInfo.setResetPasswordToken(resetToken);
-            userInfo.setResetPasswordExpirationTime(ServiceUtils.calculateExpirationDate(Constants.RESET_PWD_EXPIRATION_TIME));
-            userInfoRepository.save(userInfo);
-
-            // 3. Send email with reset link
-            response.setMessage(verificationEmail(resetToken, ServiceUtils.applicationUrl(httpRequest), "/identity/reset-password?token="));
-            response.setStatus("Success");
-        } catch (Exception e) {
-            response.setMessage(e.getMessage());
-            response.setStatus("Failed");
-        }
+        String resetToken = UUID.randomUUID().toString();
+        userInfo.setResetPasswordToken(resetToken);
+        userInfo.setResetPasswordExpirationTime(ServiceUtils.calculateExpirationDate(Constants.RESET_PWD_EXPIRATION_TIME));
+        userInfoRepository.save(userInfo);
+        response.setMessage(verificationEmail(resetToken, ServiceUtils.applicationUrl(httpRequest), "/identity/reset-password?token="));
+        response.setStatus("Success");
         return response;
     }
 
     public UserResponse resetPasswordForm(String token) {
         UserResponse userResponse = new UserResponse();
         Calendar cal = Calendar.getInstance();
-        try {
-            //1. Validate token
-            UserInfo userInfo = userInfoRepository.findByResetPasswordToken(token)
-                    .filter(f -> f.getResetPasswordExpirationTime().getTime() - cal.getTime().getTime() > 0)
-                    .orElseThrow(() -> new UsernameNotFoundException("Invalid reset password token: " + token));
-            //2. If token is valid then return reset password form.
-            userResponse.setStatus("Success");
-            userResponse.setMessage("Valid reset password token: "+token);
-        } catch (Exception e) {
-            userResponse.setStatus("Failed");
-            userResponse.setMessage(e.getMessage());
-        }
+
+        userInfoRepository.findByResetPasswordToken(token)
+                .filter(f -> f.getResetPasswordExpirationTime().getTime() - cal.getTime().getTime() > 0)
+                .orElseThrow(() -> new UsernameNotFoundException("Invalid reset password token: " + token));
+        userResponse.setStatus("Success");
+        userResponse.setMessage("Valid reset password token: " + token);
         return userResponse;
     }
 
     public UserResponse resetPassword(ResetPasswordRequest request) {
         Calendar cal = Calendar.getInstance();
         UserResponse userResponse = new UserResponse();
-        try {
-            // 1. Validate token
-            UserInfo userInfo = userInfoRepository.findByResetPasswordToken(request.getResetPasswordToken())
-                    .filter(f -> f.getResetPasswordExpirationTime().getTime() - cal.getTime().getTime() > 0)
-                    .orElseThrow(() -> new UsernameNotFoundException("Invalid reset password token: " + request.getResetPasswordToken()));
-            // 2. Update user's password
-            if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-                throw new Exception("the password you entered does not match with confirm password");
-            }
-            userInfo.setPassword(bcryptEncoder.encode(request.getNewPassword()));
 
-            userInfoRepository.save(userInfo);
-            userResponse.setStatus("Success");
-            userResponse.setMessage("Password reset successfully.");
-        } catch (Exception e) {
-            userResponse.setStatus("Failed");
-            userResponse.setMessage(e.getMessage());
+        UserInfo userInfo = userInfoRepository.findByResetPasswordToken(request.getResetPasswordToken())
+                .filter(f -> f.getResetPasswordExpirationTime().getTime() - cal.getTime().getTime() > 0)
+                .orElseThrow(() -> new UsernameNotFoundException("Invalid reset password token: " + request.getResetPasswordToken()));
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new UsernameNotFoundException("the password you entered does not match with confirm password");
         }
+        userInfo.setPassword(bcryptEncoder.encode(request.getNewPassword()));
+        userInfoRepository.save(userInfo);
+        userResponse.setStatus("Success");
+        userResponse.setMessage("Password reset successfully.");
+
         return userResponse;
     }
 }
