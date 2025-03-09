@@ -20,15 +20,21 @@ import java.util.Calendar;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.eaa.identity.constants.Constants.SUCCESS;
+
 @Service
 @Slf4j
 public class IdentityService {
 
-    @Autowired
-    private UserInfoRepository userInfoRepository;
+    private final UserInfoRepository userInfoRepository;
+
+    private final PasswordEncoder bcryptEncoder;
 
     @Autowired
-    private PasswordEncoder bcryptEncoder;
+    public IdentityService(UserInfoRepository userInfoRepository, PasswordEncoder bcryptEncoder) {
+        this.userInfoRepository = userInfoRepository;
+        this.bcryptEncoder = bcryptEncoder;
+    }
 
     public UserResponse registerUser(UserRegistrationRequest request, HttpServletRequest httpRequest) {
         UserResponse response = new UserResponse();
@@ -78,7 +84,7 @@ public class IdentityService {
         UserInfo updatedUser = populateUserUpdateData(request, userInfo);
         userInfoRepository.save(updatedUser);
         response.setMessage("User Updated Successfully");
-        response.setStatus("Success");
+        response.setStatus(SUCCESS);
         return response;
     }
 
@@ -99,7 +105,7 @@ public class IdentityService {
         userInfo.setResetPasswordExpirationTime(ServiceUtils.calculateExpirationDate(Constants.RESET_PWD_EXPIRATION_TIME));
         userInfoRepository.save(userInfo);
         response.setMessage(verificationEmail(resetToken, ServiceUtils.applicationUrl(httpRequest), "/identity/reset-password?token="));
-        response.setStatus("Success");
+        response.setStatus(SUCCESS);
         return response;
     }
 
